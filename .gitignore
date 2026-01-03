@@ -1,0 +1,56 @@
+# === OS-Specific Files ===
+.DS_Store
+Thumbs.db
+
+# === Arduino / ESP32 Build Files ===
+*.bin
+*.elf
+*.hex
+*.map
+*.eep
+*.ini
+*.pio
+.pio/
+.build/
+.ccls-cache/
+
+# === VSCode ===
+.vscode/
+*.code-workspace
+
+# === PlatformIO ===
+.pioenvs/
+.piolibdeps/
+
+# === Logs ===
+*.log
+
+# === Python cache (in case helper scripts are added later) ===
+__pycache__/
+*.pyc
+
+# === Backup Files ===
+*~
+*.swp
+*.tmp
+
+# === Node (if you later run a small server/UI) ===
+node_modules/
+dist/
+build/
+
+# === Photos Directory Exceptions ===
+# Keep image files, but ignore raw uncompressed formats
+*.CR2
+*.NEF
+*.ARW
+
+# === CAD Backups ===
+*.bak
+
+# === 3D Printer Slicer Files ===
+*.gcode
+
+# === Ignore Large Video Raws (optional) ===
+*.mov
+*.avi
