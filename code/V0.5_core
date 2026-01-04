@@ -1,1 +1,113 @@
+#include <Wire.h>
+#include <math.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_LSM6DSOX.h>
+#include <Adafruit_Sensor.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Adafruit_LSM6DSOX imu;
+
+bool imuOK = false;
+
+// ---------- Step detection ----------
+unsigned long lastStepTime = 0;
+int stepCount = 0;
+
+const float GRAVITY = 9.81;
+const float STEP_THRESHOLD = 1.2;     // above gravity
+const unsigned long STEP_DEBOUNCE = 250; // ms
+
+// ---------- I2C BUS RESET ----------
+void i2cBusReset() {
+  pinMode(SCL, OUTPUT);
+  pinMode(SDA, OUTPUT);
+  digitalWrite(SCL, HIGH);
+  digitalWrite(SDA, HIGH);
+  delay(10);
+  for (int i = 0; i < 9; i++) {
+    digitalWrite(SCL, LOW);
+    delayMicroseconds(5);
+    digitalWrite(SCL, HIGH);
+    delayMicroseconds(5);
+  }
+}
+
+void setup() {
+  delay(1500);
+  i2cBusReset();
+
+  Wire.begin();
+  Wire.setClock(100000);
+  Wire.setTimeout(100);
+
+  // ---------- IMU FIRST ----------
+  imuOK = imu.begin_I2C(0x6A);
+  if (imuOK) {
+    imu.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
+    imu.setAccelDataRate(LSM6DS_RATE_26_HZ);
+  }
+
+  delay(300);
+
+  // ---------- OLED SECOND ----------
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    while (1);
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("STEP 2: STEPS");
+  display.print("IMU: ");
+  display.println(imuOK ? "OK" : "FAIL");
+  display.display();
+}
+
+void loop() {
+  if (!imuOK) return;
+
+  // Only read when data is ready
+  if (!imu.accelerationAvailable()) {
+    delay(5);
+    return;
+  }
+
+  sensors_event_t accel;
+  imu.getAccelerometerSensor()->getEvent(&accel);
+
+  float ax = accel.acceleration.x;
+  float ay = accel.acceleration.y;
+  float az = accel.acceleration.z;
+
+  float magnitude = sqrt(ax * ax + ay * ay + az * az);
+  unsigned long now = millis();
+
+  // ---------- Step detection ----------
+  if (magnitude > (GRAVITY + STEP_THRESHOLD)) {
+    if (now - lastStepTime > STEP_DEBOUNCE) {
+      stepCount++;
+      lastStepTime = now;
+    }
+  }
+
+  // ---------- OLED UPDATE ----------
+  display.fillRect(0, 16, 128, 48, SSD1306_BLACK);
+
+  display.setCursor(0, 16);
+  display.print("Steps: ");
+  display.println(stepCount);
+
+  display.setCursor(0, 32);
+  display.print("Mag: ");
+  display.println(magnitude, 2);
+
+  display.display();
+
+  delay(100);
+}
 
