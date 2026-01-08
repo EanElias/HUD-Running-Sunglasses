@@ -1,5 +1,5 @@
 # HUD-Running-Sunglasses
-Wearable heads-up display (HUD) sunglasses for runners. Arduino Uno + OLED + IMU-based step detection
+Wearable heads-up display (HUD) sunglasses for runners. Arduino Uno/ESP32 + OLED + IMU-based step detection
 
 Purpose:
 Traditional wathces require runners to look down, breaking rhythm and increasing risk. This project creates a light weight, low-cost heads-up display that projects running stats directly into the athlete's line of sight
@@ -7,7 +7,7 @@ Traditional wathces require runners to look down, breaking rhythm and increasing
 Features:
 -OLED HUD pojected onto sunglasses lens
 -Step detection using MPU-6050 accelerometer
--Arduino Uno microcontroller handling display + data
+-Arduino Uno/ESP32 microcontroller handling display + data
 -Battery bank
 -Wearable-mounted prototype
 
