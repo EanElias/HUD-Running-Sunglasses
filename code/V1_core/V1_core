@@ -1,0 +1,121 @@
+#include <Wire.h>
+#include <math.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_LSM6DSOX.h>
+#include <Adafruit_Sensor.h>
+
+// ---------- I2C PINS FOR ESP32 ----------
+#define SDA_PIN 21
+#define SCL_PIN 22
+
+// ---------- OLED ----------
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// ---------- IMU ----------
+Adafruit_LSM6DSOX imu;
+
+// ---------- Step detection ----------
+unsigned long lastStepTime = 0;
+int stepCount = 0;
+
+const float GRAVITY = 9.81;
+const float STEP_THRESHOLD = 1.2;
+const unsigned long STEP_DEBOUNCE = 250;
+
+// ---------- Cadence ----------
+unsigned long lastCadenceUpdate = 0;
+int prevStepCount = 0;
+int cadenceSPM = 0;
+const unsigned long CADENCE_INTERVAL = 2000;
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+
+  // ---------- I2C ----------
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.setClock(400000); // ESP32 can handle fast I2C
+
+  // ---------- IMU ----------
+  if (!imu.begin_I2C(0x6A)) {
+    Serial.println("LSM6DSOX not found");
+    while (1);
+  }
+
+  imu.setAccelRange(LSM6DS_ACCEL_RANGE_8_G);
+  imu.setAccelDataRate(LSM6DS_RATE_104_HZ);
+
+  Serial.println("LSM6DSOX OK");
+
+  // ---------- OLED ----------
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED failed");
+    while (1);
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("ESP32 RUN GLASSES");
+  display.println("IMU + OLED OK");
+  display.display();
+
+  lastCadenceUpdate = millis();
+}
+
+void loop() {
+  sensors_event_t accel, gyro, temp;
+  imu.getEvent(&accel, &gyro, &temp);
+
+  float ax = accel.acceleration.x;
+  float ay = accel.acceleration.y;
+  float az = accel.acceleration.z;
+
+  float magnitude = sqrt(ax * ax + ay * ay + az * az);
+  unsigned long now = millis();
+
+  // ---------- Step detection ----------
+  if (magnitude > (GRAVITY + STEP_THRESHOLD)) {
+    if (now - lastStepTime > STEP_DEBOUNCE) {
+      stepCount++;
+      lastStepTime = now;
+    }
+  }
+
+  // ---------- Cadence ----------
+  if (now - lastCadenceUpdate >= CADENCE_INTERVAL) {
+    int deltaSteps = stepCount - prevStepCount;
+    float minutes = (now - lastCadenceUpdate) / 60000.0;
+
+    cadenceSPM = (minutes > 0) ? (int)(deltaSteps / minutes) : 0;
+
+    prevStepCount = stepCount;
+    lastCadenceUpdate = now;
+  }
+
+  // ---------- OLED ----------
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("ESP32 RUN GLASSES");
+
+  display.setCursor(0, 16);
+  display.print("Steps: ");
+  display.println(stepCount);
+
+  display.setCursor(0, 28);
+  display.print("Cad: ");
+  display.print(cadenceSPM);
+  display.println(" spm");
+
+  display.setCursor(0, 40);
+  display.print("Mag: ");
+  display.println(magnitude, 2);
+
+  display.display();
+  delay(100);
+}
+ 
